@@ -10,8 +10,5 @@ This source code and the demo are for a explanation in my blog post.
   yarn start
 ```
 
-## Demo
-https://mnmxmx.github.io/threejs-shadow-map/dist/
-
 ## License
 MIT License.  
