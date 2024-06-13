@@ -36,6 +36,8 @@ export default class Artwork{
 
         this.intensity_0 = new THREE.Vector4(1, 0, 0, 0);
 
+        this.time_now = 0;
+
         this.createLight();
         this.createMesh();
         this.createControls();
@@ -82,44 +84,50 @@ export default class Artwork{
 
     createMesh(){
         this.createGround();
-        const sphere_s = this.createObj(new THREE.SphereGeometry(10, 32, 32), 0xFAF3F3);
+        const sphere_s = this.createObj(new THREE.SphereGeometry(10, 32, 32), 0xFAF3F3, 1.0);
         sphere_s.position.set(20, 10, 0);
 
-        const cylinder = this.createObj(new THREE.CylinderGeometry( 10, 10, 40, 32 ), 0xFAF3F3);
+        const cylinder = this.createObj(new THREE.CylinderGeometry( 10, 10, 40, 32 ), 0xFAF3F3, 1.0);
         cylinder.position.set(-20, 20, 40);
 
-        const sphere = this.createObj(new THREE.SphereGeometry(24, 32, 32), 0xFAF3F3);
+        const sphere = this.createObj(new THREE.SphereGeometry(24, 32, 32), 0xFAF3F3, 0.8);
         sphere.position.set(-20, 24, 0);
 
-        const box = this.createObj(new THREE.BoxGeometry(20, 20, 20), 0xFAF3F3);
+        const box = this.createObj(new THREE.BoxGeometry(20, 20, 20), 0x44ca5a, 0.6);
         box.position.set(40, 10, -30);
 
-        const cone = this.createObj(new THREE.ConeGeometry( 20, 30, 32 ), 0xFAF3F3)
+        const cone = this.createObj(new THREE.ConeGeometry( 20, 30, 32 ), 0xFAF3F3, 0.7)
         cone.position.set(37, 15, 25);
+
+        const glasswin = this.createObj( new THREE.BoxGeometry(50, 50, 1), 0x44ca5a, 1.);
+        //glasswin.position.set( -60, 50 , 40);
     }
 
     createLight(){
-        this.light = new THREE.DirectionalLight( 0xffffff, 1.0 );
-        this.light.position.set(-60, 50, 40);
+        this.light = new THREE.SpotLight( 0xff0000, 1.0, 60, Math.PI/10. );
+        //this.light.position.set(-60, 50, 40);
+        this.light.target = this.scene;
 
 
         this.scene.add(this.light);
 
-        const lightHelper = new THREE.DirectionalLightHelper( this.light, 5 );
+        const lightHelper = new THREE.SpotLightHelper( this.light, 5 );
         this.scene.add(lightHelper);
 
         this.helpers.push(lightHelper);
 
         this.frustumSize = 200;
 
-        this.shadowCamera = this.light.shadow.camera = new THREE.OrthographicCamera(
+       /* this.shadowCamera = this.light.shadow.camera = new THREE.OrthographicCamera(
             -this.frustumSize / 2,
             this.frustumSize / 2,
             this.frustumSize / 2,
             -this.frustumSize / 2,
             1,
             200
-        );
+        );*/
+
+        this.shadowCamera = this.light.shadow.camera = new THREE.PerspectiveCamera(45,1 /*window.innerWidth/window.innerHeight*/,0.1, 200);
 
         this.scene.add(this.shadowCamera);
         this.shadowCamera.position.copy(this.light.position);
@@ -146,7 +154,7 @@ export default class Artwork{
         const geometry = new THREE.BoxGeometry(250, 250, 250);
         // geometry.rotateX(-Math.PI / 2);
 
-        const {material, shadowMaterial} = this.createMaterial(0xE1E5EA, vertexShader, fragmentShader);
+        const {material, shadowMaterial} = this.createMaterial(0xE1E5EA, vertexShader, fragmentShader, 1.0);
 
         const mesh = new THREE.Mesh(geometry, material);
 
@@ -161,9 +169,9 @@ export default class Artwork{
         this.group.add(mesh);
     }
 
-    createObj(geometry, color){
+    createObj(geometry, color, opacity){
 
-        const {material, shadowMaterial} = this.createMaterial(color, vertexShader, fragmentShader);
+        const {material, shadowMaterial} = this.createMaterial(color, vertexShader, fragmentShader, opacity);
 
 
         const mesh = new THREE.Mesh(geometry, material);
@@ -178,7 +186,7 @@ export default class Artwork{
         return mesh;
     }
 
-    createMaterial(color, vertexShader, fragmentShader){
+    createMaterial(color, vertexShader, fragmentShader, opacity){
         const uniforms = {
             uTime: {
                 value: 0
@@ -201,17 +209,23 @@ export default class Artwork{
             uIntensity_0: {
                 value: this.intensity_0
             },
+            uOpacity:{
+                value: opacity
+            },
         }
         const material = new THREE.ShaderMaterial({
             vertexShader,
             fragmentShader,
             uniforms,
+            transparent:true,
+            side:THREE.DoubleSide
         });
 
         const shadowMaterial = new THREE.ShaderMaterial({
             vertexShader,
             fragmentShader: shadowFragmentShader,
             uniforms,
+            //transparent:true,
             // side: THREE.BackSide
         });
 
@@ -228,7 +242,7 @@ export default class Artwork{
     }
 
     updateLight(){
-        let x = this.light.position.x;
+        /*let x = this.light.position.x;
         let z = this.light.position.z;
 
         const s = Math.sin(common.delta * 0.2);
@@ -238,20 +252,36 @@ export default class Artwork{
         const nz = x * s + z * c;
 
         this.light.position.x = nx;
-        this.light.position.z = nz;
+        this.light.position.z = nz;*/
+
+        this.light.position.x = 60.*Math.cos(this.time_now/3000.);
+        this.light.position.z = 60.*Math.sin(this.time_now/3000.);
+        this.light.position.y = 100.;
+
+
 
         this.shadowCamera.position.copy(this.light.position);
-        this.shadowCamera.lookAt(this.scene.position);
+        //this.shadowCamera.lookAt(this.scene.position);
     }
 
     update(){
+        this.time_now = performance.now();
         common.update();
 
         this.updateLight();
+        /*this.meshProps[6].mesh.position.copy(this.light.position);
+        this.meshProps[6].mesh.translateOnAxis( new THREE.Vector3(0,0,1), 5);
+        this.meshProps[6].mesh.lookAt(this.scene.position);*/
+
+        //this.meshProps[6].mesh.rotation.x = Math.PI/4.;
         
         for(let i = 0; i < this.meshProps.length; i++){
             const meshProps = this.meshProps[i];
             meshProps.mesh.material = meshProps.shadowMaterial;
+        }
+
+        for(let i = 0; i < this.helpers.length; i++){
+            this.helpers[i].update();
         }
 
         for(let i = 0; i < this.helpers.length; i++){
